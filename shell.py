@@ -2,7 +2,7 @@ import basic
 
 while True:
     text = input("basic terminal > ")
-    result, error = basic.run(text)
+    result, error = basic.run("<File_name>", text)
     
     if error:
         print(error.as_string())
