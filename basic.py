@@ -84,13 +84,12 @@ class Lexer:
     def __init__(self, fn, text):
         self.fn = fn
         self.text = text
-        self.pos = Position(-1, 0, -1, fn, text) # Position(Index, Row, Column)
+        self.pos = Position(-1, 0, -1, fn, text) # Position(Index, Row, Column, file name, terminal text)
         self.current_char = None
         self.advance()
 
     def advance(self):
         "Advance to the next character in the text"
-
         self.pos.advance(self.current_char)
         self.current_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
 
@@ -151,10 +150,91 @@ class Lexer:
         
 
 #######################################
+# NODES
+#######################################
+# Creating a class called NumberNode for parser to parse the tokens in the form of nodes.
+class NumberNode:
+    def __init__(self, tok):
+        self.tok = tok
+
+    def __repr__(self):
+        return f"{self.tok}"
+    
+# Creating the class BinOpNode to perform add, subtract, multiply and divide operations
+class BinOpNode:
+    def __init__(self, left_tok, op_tok, right_tok):
+        self.left_tok = left_tok
+        self.op_tok = op_tok
+        self.right_tok = right_tok
+
+    def __repr__(self):
+        return f"({self.left_tok}, {self.op_tok}, {self.right_tok})"
+    
+# TODO: Will add one more Node class. 
+
+
+
+#######################################
+# PARSER
+#######################################
+
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.tok_idx = -1
+        self.advance()
+
+    def advance(self):
+        self.tok_idx += 1
+        if self.tok_idx < len(self.tokens):
+            self.current_tok = self.tokens[self.tok_idx]
+        return self.current_tok
+    
+    def parse(self):
+        res = self.expr()
+        return res
+    
+    ######
+    # Creating methods according to the grammer of the programming language
+    def factor(self):
+        tok = self.current_tok
+
+        if tok.type in (TT_INT, TT_FLOAT):
+            self.advance()
+            return NumberNode(tok)
+        
+    def term(self):
+        return self.bin_op(self.factor, (TT_MUL, TT_DIV))
+    
+    def expr(self):
+        return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
+
+    #############
+
+    def bin_op(self, func, ops):
+        left = func()
+
+        while self.current_tok.type in ops:
+            op_tok = self.current_tok
+            self.advance()
+            right = func()
+            left = BinOpNode(left, op_tok, right)
+        
+        return left
+
+
+#######################################
 # RUN
 #######################################
 
 def run(fn, text):
     lexer = Lexer(fn, text)
     tokens, error = lexer.make_tokens()
-    return tokens, error
+    if error:
+        return None, error
+
+    # Generate Abstract Syntax Tree
+    parser = Parser(tokens)
+    ast = parser.parse()
+
+    return ast, error
